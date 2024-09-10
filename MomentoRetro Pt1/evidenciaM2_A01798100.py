@@ -3,6 +3,12 @@
 # Evidencia: Implementación de una técnica de aprendizaje máquina sin el uso de un framework
 # Algoritmo: Hebb Learning
 
+# Importar librerías
+import seaborn as sns
+import matplotlib.pyplot as plt
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
+
+# Función para el aprendizaje de Hebb
 def hebb_learning(num_inputs, inputs, output, init_weights, bias_value):
     """
     Parámetros:
@@ -20,10 +26,17 @@ def hebb_learning(num_inputs, inputs, output, init_weights, bias_value):
     # Inicializar pesos, incluyendo el peso del sesgo (w0)
     weights = [init_weights] * (num_inputs + bias_value)  # Incluye el peso w0 para el sesgo
     
+    # Lista para almacenar las predicciones
+    predictions = []
+
     # Se itera sobre cada conjunto de entradas y su correspondiente salida esperada
     for i in range(len(inputs[0])):
         x = [1] + [inputs[j][i] for j in range(num_inputs)]  # Incluye x0 = 1 para el sesgo
         y = output[i]
+
+        # Predicción
+        prediction = 1 if sum([x[j] * weights[j] for j in range(len(weights))]) >= 0 else -1
+        predictions.append(prediction)
         
         # Actualización de pesos utilizando la regla de Hebb
         for j in range(len(weights)):
@@ -33,8 +46,15 @@ def hebb_learning(num_inputs, inputs, output, init_weights, bias_value):
     equation = f"y = {weights[0]}"
     for i in range(1, len(weights)):
         equation += f" + ({weights[i]} * x{i})"
+
+    # Calcular métricas
+    accuracy = accuracy_score(output, predictions)
+    precision = precision_score(output, predictions, average='binary', pos_label=1)
+    recall = recall_score(output, predictions, average='binary', pos_label=1)
+    f1 = f1_score(output, predictions, average='binary', pos_label=1)
+    conf_matrix = confusion_matrix(output, predictions)
     
-    return weights, equation
+    return weights, equation, accuracy, precision, recall, f1, conf_matrix
 
 
 # Ejemplo de uso
@@ -66,8 +86,21 @@ init_weights = 0
 bias_value = 1
 
 # Ejecutar el algoritmo
-weights, equation = hebb_learning(num_inputs, inputs, output, init_weights, bias_value)
+weights, equation, accuracy, precision, recall, f1, conf_matrix = hebb_learning(num_inputs, inputs, output, init_weights, bias_value)
 
 # Mostrar resultados
-print("Pesos finales:", weights)
-print("Ecuación final:", equation)
+print("\nPesos finales:", weights)
+print("\nEcuación final:", equation)
+
+print("\n~Métricas~")
+print(f"Exactitud: {accuracy}")
+print(f"Precisión: {precision}")
+print(f"Recall: {recall}")
+print(f"F1 Score: {f1}")
+print("\nMatriz de confusión:")
+plt.figure(figsize=(8, 6))
+sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues')
+plt.xlabel('Predicción')
+plt.ylabel('Actual')
+plt.title('Matriz de confusión - Algoritmo de Hebb')
+plt.show()
