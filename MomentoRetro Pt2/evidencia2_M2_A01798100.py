@@ -23,10 +23,10 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_
 
 # Definición de los hiperparámetros
 param_grid = {
-    'n_estimators': [50, 100, 200],
-    'max_depth':  [2, 10, 20, 30],
-    'min_samples_split': [2, 5, 10], 
-    'min_samples_leaf': [1, 2, 4]
+    'n_estimators': [50, 100, 200], # Número de árboles en el bosque
+    'max_depth':  [2, 10, 20, 30], # Profundidad máxima de cada árbol
+    'min_samples_split': [2, 5, 10], # Número mínimo de muestras requeridas para dividir un nodo
+    'min_samples_leaf': [1, 2, 4] # Número mínimo de muestras requeridas en cada hoja
 }
 
 # Crear el modelo base
@@ -38,10 +38,10 @@ gridSearch.fit(X_train, y_train)
 
 # Se obtienen los mejores parámetros y el mejor estimador
 bestParams = gridSearch.best_params_
-print(f"Mejores parámetros: {bestParams}")
+print(f"\nMejores parámetros: {bestParams}")
 
 bestEstimator = gridSearch.best_estimator_
-print(f"Mejor estimador: {bestEstimator}")
+print(f"\nMejor estimador: {bestEstimator}")
 
 # Predicción
 y_pred = bestEstimator.predict(X_test)
@@ -49,12 +49,15 @@ y_pred = bestEstimator.predict(X_test)
 # Métricas
 # -- Exactitud --
 accuracy = accuracy_score(y_test, y_pred)
-print(f"Exactitud: {accuracy}")
+print(f"\nExactitud: {accuracy}")
+
+# -- Reporte de clasificación --
+class_report = classification_report(y_test, y_pred)
+print("\nReporte de clasificación:")
+print(class_report)
 
 # -- Matriz de confusión --
 confusion_matrix = confusion_matrix(y_test, y_pred)
-print("Matriz de confusión:")
-print(confusion_matrix)
 
 # Graficarlo
 plt.figure(figsize=(8, 6))
@@ -63,9 +66,3 @@ plt.xlabel('Predicción')
 plt.ylabel('Actual')
 plt.title('Matriz de confusión - Random Forest')
 plt.show()
-
-# -- Reporte de clasificación --
-class_report = classification_report(y_test, y_pred)
-print("Reporte de clasificación:")
-print(class_report)
-
