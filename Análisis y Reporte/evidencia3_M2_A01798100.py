@@ -19,16 +19,16 @@ data_desc = data[["HomePlanet","CryoSleep","Destination","Age","VIP","RoomServic
 print("\nDataset original:")
 print(data_desc.head())
 
-## Técnicas de regularización (Normalización de los datos)
+## Técnicas de regularización (Imputación de los datos)
 # Si tiene na significa que no tiene
 data_desc['RoomService'] = data_desc['RoomService'].fillna(0).astype(int)
 data_desc['FoodCourt'] = data_desc['FoodCourt'].fillna(0).astype(int)
 data_desc['ShoppingMall'] = data_desc['ShoppingMall'].fillna(0).astype(int)
 data_desc['Spa'] = data_desc['Spa'].fillna(0).astype(int)
 data_desc['VRDeck'] = data_desc['VRDeck'].fillna(0).astype(int)
-#se rellena porque si no escribio significa que no tiene VIP
+# Se rellena porque si no escribio significa que no tiene VIP
 data_desc['VIP'] = data_desc['VIP'].fillna("False").astype(str)
-#se rellena con la moda
+# Se rellena con la moda
 data_desc['Destination'] = data_desc['Destination'].fillna(data_desc['Destination'].mode()[0]).astype(str)
 # Rellenar los valores faltantes con 'Earth'
 data_desc['HomePlanet'].fillna('Earth', inplace=True)
@@ -53,8 +53,8 @@ print(X_data_desc_encoded.head())
 
 
 ## Técnicas de regularización (Escalamiento de los datos)
-# scaler = MinMaxScaler()
-# X_data_desc_encoded = pd.DataFrame(scaler.fit_transform(X_data_desc_encoded),columns=X_data_desc_encoded.columns)
+scaler = MinMaxScaler()
+X_data_desc_encoded = pd.DataFrame(scaler.fit_transform(X_data_desc_encoded),columns=X_data_desc_encoded.columns)
 
 ## Dividir el dataset en entrenamiento y prueba
 X_train, X_test, y_train, y_test = train_test_split(X_data_desc_encoded, y_data_desc, test_size=0.2, random_state=42)
@@ -102,122 +102,154 @@ class_report = classification_report(y_test, y_pred)
 print("\nReporte de clasificación:")
 print(class_report)
 
+# -- Matriz de confusión & Curva de aprendizaje --
+fig, ax = plt.subplots(1, 2, figsize=(16, 6))
 
-## Gráficas
+# Primera gráfica
+confusion_matrix = confusion_matrix(y_test, y_pred)
+sns.heatmap(confusion_matrix, annot=True, fmt='d', cmap='Oranges', 
+            xticklabels=['No transportado', 'Transportado'],
+            yticklabels=['No transportado', 'Transportado'],
+            ax=ax[0])
+ax[0].set_xlabel('Predicción')
+ax[0].set_ylabel('Actual')
+ax[0].set_title('Matriz de confusión - Random Forest')
 
-# ++ Graficar exactitud en entrenamiento vs prueba ++
-# Exactitud en entrenamiento y prueba
-train_accuracy = rfBase.score(X_train, y_train)
-test_accuracy = rfBase.score(X_test, y_test)
-
-labels = ['Entrenamiento', 'Prueba']
-accuracy_scores = [train_accuracy, test_accuracy]
-
-plt.figure(figsize=(6, 4))
-plt.bar(labels, accuracy_scores, color=['blue', 'orange'])
-plt.ylabel('Exactitud')
-plt.title('Exactitud en Entrenamiento vs Prueba')
-plt.ylim(0.1, 1)
-plt.show(block=False)
-plt.pause(1)
-
-# Curva de aprendizaje
-train_sizes, train_scores, test_scores = learning_curve(rfBase, X_train, y_train, cv=6, scoring='accuracy', n_jobs=-1, train_sizes=np.linspace(0.1, 1.0, 10))
+# Segunda gráfica
+train_sizes, train_scores, test_scores = learning_curve(gridSearch, X_train, y_train, cv=6, scoring='accuracy', n_jobs=-1, train_sizes=np.linspace(0.1, 1.0, 10))
+# train_sizes, train_scores, test_scores = learning_curve(gridSearch, X_train, y_train, cv=6, scoring='accuracy', n_jobs=-1, train_sizes=np.linspace(0.1, 1.0, 10))
 
 train_mean = np.mean(train_scores, axis=1)
 test_mean = np.mean(test_scores, axis=1)
 
-plt.figure(figsize=(8, 6))
-plt.plot(train_sizes, train_mean, 'o-', color='green', label='Entrenamiento')
-plt.plot(train_sizes, test_mean, 'o-', color='darkred', label='Prueba')
-plt.xlabel('Tamaño del conjunto de entrenamiento')
-plt.ylabel('Exactitud')
-plt.title('Curva de Aprendizaje - Entrenamiento vs Prueba')
-plt.legend(loc='best')
-plt.show(block=False)
-plt.pause(1)
+ax[1].plot(train_sizes, train_mean, 'o-', color='darkred', label='Entrenamiento')
+ax[1].plot(train_sizes, test_mean, 'o-', color='darkcyan', label='Prueba')
+ax[1].set_xlabel('Tamaño del conjunto de entrenamiento')
+ax[1].set_ylabel('Exactitud')
+ax[1].set_title('Curva de Aprendizaje')
+ax[1].legend(loc='best')
 
-
-
-# ++ Análisis del grado de sesgo (bias) ++
-# Matriz de confusión
-conf_matrix = confusion_matrix(y_test, y_pred)
-
-plt.figure(figsize=(8, 6))
-sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues', 
-            xticklabels=['No transportado', 'Transportado'],
-            yticklabels=['No transportado', 'Transportado'])
-plt.xlabel('Predicción')
-plt.ylabel('Actual')
-plt.title('Matriz de confusión - Conjunto de Prueba')
-plt.show(block=False)
-plt.pause(1)
-
-# Curva de precisión y recall
-# Probabilidades
-y_probs = rfBase.predict_proba(X_test)[:, 1]
-
-# Curva de precisión y recall
-precision, recall, thresholds = precision_recall_curve(y_test, y_probs)
-plt.figure(figsize=(8, 6))
-plt.plot(recall, precision, marker='.', label='Random Forest', color='red')
-plt.xlabel('Recall')
-plt.ylabel('Precision')
-plt.title('Curva de Precisión-Recall')
-plt.legend()
-plt.show(block=False)
-plt.pause(1)
-
-
-
-# ++ Analizar del grado de varianza ++
-# Calcular la predicción en el conjunto de entrenamiento
-y_train_pred = rfBase.predict(X_train)
-
-# Métricas para entrenamiento
-train_accuracy = accuracy_score(y_train, y_train_pred)
-test_accuracy = accuracy_score(y_test, y_pred)
-
-plt.figure(figsize=(6, 4))
-plt.bar(['Entrenamiento', 'Prueba'], [train_accuracy, test_accuracy], color=['olive', 'brown'])
-plt.ylabel('Exactitud')
-plt.title('Exactitud en Entrenamiento vs Prueba (Varianza)')
-plt.ylim(0.1, 1) 
-plt.show(block=False)
-plt.pause(1)
-
-# Error en entrenamiento y prueba
-train_error = 1 - train_accuracy
-test_error = 1 - test_accuracy
-
-plt.figure(figsize=(6, 4))
-plt.bar(['Entrenamiento', 'Prueba'], [train_error, test_error], color=['olive', 'brown'])
-plt.ylabel('Error')
-plt.title('Error en Entrenamiento vs Prueba (Varianza)')
-plt.ylim(0.0, 0.35)  # Ajustar límites
-plt.show(block=False)
-plt.pause(1)
-
-
-# ++ Nivel de ajuste del modelo ++
-scores = cross_val_score(rfBase, X_train, y_train, cv=5)
-
-plt.figure(figsize=(6, 4))
-plt.plot(range(1, 6), scores, marker='o', color='magenta')
-plt.xlabel('Número de Validaciones (k)')
-plt.ylabel('Exactitud')
-plt.title('Curva de Validación - Random Forest')
-plt.ylim(0.4, 1)  # Ajuste de límites en Y
-plt.show(block=False)
-plt.pause(1)
-
-# Curva de aprendizaje
-
-plt.figure(figsize=(8, 6))
-plt.plot(train_sizes, train_mean, 'o-', color='purple', label='Entrenamiento')
-plt.plot(train_sizes, test_mean, 'o-', color='darkcyan', label='Prueba')
-plt.xlabel('Tamaño del conjunto de entrenamiento')
-plt.ylabel('Exactitud')
-plt.title('Curva de Aprendizaje - Entrenamiento vs Prueba')
-plt.legend(loc='best')
+plt.tight_layout()
 plt.show()
+
+# ## Gráficas
+
+# # ++ Graficar exactitud en entrenamiento vs prueba ++
+# # Exactitud en entrenamiento y prueba
+# train_accuracy = rfBase.score(X_train, y_train)
+# test_accuracy = rfBase.score(X_test, y_test)
+# # train_accuracy = gridSearch.score(X_train, y_train)
+# # test_accuracy = gridSearch.score(X_test, y_test)
+
+# labels = ['Entrenamiento', 'Prueba']
+# accuracy_scores = [train_accuracy, test_accuracy]
+
+# plt.figure(figsize=(6, 4))
+# plt.bar(labels, accuracy_scores, color=['blue', 'orange'])
+# plt.ylabel('Exactitud')
+# plt.title('Exactitud en Entrenamiento vs Prueba')
+# plt.ylim(0.1, 1)
+# plt.show(block=False)
+# plt.pause(1)
+
+# # Curva de aprendizaje
+# train_sizes, train_scores, test_scores = learning_curve(rfBase, X_train, y_train, cv=6, scoring='accuracy', n_jobs=-1, train_sizes=np.linspace(0.1, 1.0, 10))
+# # train_sizes, train_scores, test_scores = learning_curve(gridSearch, X_train, y_train, cv=6, scoring='accuracy', n_jobs=-1, train_sizes=np.linspace(0.1, 1.0, 10))
+
+# train_mean = np.mean(train_scores, axis=1)
+# test_mean = np.mean(test_scores, axis=1)
+
+# plt.figure(figsize=(8, 6))
+# plt.plot(train_sizes, train_mean, 'o-', color='green', label='Entrenamiento')
+# plt.plot(train_sizes, test_mean, 'o-', color='darkred', label='Prueba')
+# plt.xlabel('Tamaño del conjunto de entrenamiento')
+# plt.ylabel('Exactitud')
+# plt.title('Curva de Aprendizaje - Entrenamiento vs Prueba')
+# plt.legend(loc='best')
+# plt.show(block=False)
+# plt.pause(1)
+
+# # ++ Análisis del grado de sesgo (bias) ++
+# # Matriz de confusión
+# conf_matrix = confusion_matrix(y_test, y_pred)
+
+# plt.figure(figsize=(8, 6))
+# sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues', 
+#             xticklabels=['No transportado', 'Transportado'],
+#             yticklabels=['No transportado', 'Transportado'])
+# plt.xlabel('Predicción')
+# plt.ylabel('Actual')
+# plt.title('Matriz de confusión - Conjunto de Prueba')
+# plt.show(block=False)
+# plt.pause(1)
+
+# # Curva de precisión y recall
+# # Probabilidades
+# y_probs = rfBase.predict_proba(X_test)[:, 1]
+# # y_probs = gridSearch.predict_proba(X_test)[:, 1]
+
+# # Curva de precisión y recall
+# precision, recall, thresholds = precision_recall_curve(y_test, y_probs)
+# plt.figure(figsize=(8, 6))
+# plt.plot(recall, precision, marker='.', label='Random Forest', color='red')
+# plt.xlabel('Recall')
+# plt.ylabel('Precision')
+# plt.title('Curva de Precisión-Recall')
+# plt.legend()
+# plt.show(block=False)
+# plt.pause(1)
+
+
+# # ++ Analizar del grado de varianza ++
+# # Calcular la predicción en el conjunto de entrenamiento
+# y_train_pred = rfBase.predict(X_train)
+# # y_train_pred = gridSearch.predict(X_train)
+
+# # Métricas para entrenamiento
+# train_accuracy = accuracy_score(y_train, y_train_pred)
+# test_accuracy = accuracy_score(y_test, y_pred)
+
+# plt.figure(figsize=(6, 4))
+# plt.bar(['Entrenamiento', 'Prueba'], [train_accuracy, test_accuracy], color=['olive', 'brown'])
+# plt.ylabel('Exactitud')
+# plt.title('Exactitud en Entrenamiento vs Prueba (Varianza)')
+# plt.ylim(0.1, 1) 
+# plt.show(block=False)
+# plt.pause(1)
+
+# # Error en entrenamiento y prueba
+# train_error = 1 - train_accuracy
+# test_error = 1 - test_accuracy
+
+# plt.figure(figsize=(6, 4))
+# plt.bar(['Entrenamiento', 'Prueba'], [train_error, test_error], color=['olive', 'brown'])
+# plt.ylabel('Error')
+# plt.title('Error en Entrenamiento vs Prueba (Varianza)')
+# plt.ylim(0.0, 0.35)  # Ajustar límites
+# plt.show(block=False)
+# plt.pause(1)
+
+
+# # ++ Nivel de ajuste del modelo ++
+# scores = cross_val_score(rfBase, X_train, y_train, cv=5)
+# # scores = cross_val_score(gridSearch, X_train, y_train, cv=5)
+
+# plt.figure(figsize=(6, 4))
+# plt.plot(range(1, 6), scores, marker='o', color='magenta')
+# plt.xlabel('Número de Validaciones (k)')
+# plt.ylabel('Exactitud')
+# plt.title('Curva de Validación - Random Forest')
+# plt.ylim(0.4, 1)  # Ajuste de límites en Y
+# plt.show(block=False)
+# plt.pause(1)
+
+# # Curva de aprendizaje
+
+# plt.figure(figsize=(8, 6))
+# plt.plot(train_sizes, train_mean, 'o-', color='purple', label='Entrenamiento')
+# plt.plot(train_sizes, test_mean, 'o-', color='darkcyan', label='Prueba')
+# plt.xlabel('Tamaño del conjunto de entrenamiento')
+# plt.ylabel('Exactitud')
+# plt.title('Curva de Aprendizaje - Random Forest')
+# plt.legend(loc='best')
+# plt.show()
